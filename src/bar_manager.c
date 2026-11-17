@@ -592,7 +592,10 @@ void bar_manager_begin(struct bar_manager* bar_manager) {
 
     memset(bar_manager->bars, 0, sizeof(struct bar*) * bar_manager->bar_count);
     bar_manager->bars[0] = bar_create(did);
-    bar_manager->bars[0]->adid = display_arrangement(did);
+    // display_arrangement returns 0 while the main display is missing from
+    // the managed list mid-reconfiguration; adid 0 indexes windows[-1].
+    int adid = display_arrangement(did);
+    bar_manager->bars[0]->adid = adid > 0 ? adid : 1;
     if (bar_manager->any_bar_hidden)
       bar_set_hidden(bar_manager->bars[0], true);
   }

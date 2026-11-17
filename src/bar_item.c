@@ -570,6 +570,7 @@ struct window* bar_item_get_window(struct bar_item* bar_item, uint32_t adid) {
 }
 
 void bar_item_remove_window(struct bar_item* bar_item, uint32_t adid) {
+  if (adid < 1) return;
   if (bar_item->num_windows >= adid && bar_item->windows[adid - 1]) {
     window_destroy(bar_item->windows[adid - 1]);
     bar_item->windows[adid - 1] = NULL;
@@ -727,7 +728,7 @@ void bar_item_draw(struct bar_item* bar_item, CGContextRef context) {
 }
 
 void bar_item_change_space(struct bar_item* bar_item, uint64_t dsid, uint32_t adid) {
-  if (bar_item->num_windows >= adid && bar_item->windows[adid - 1]) {
+  if (adid >= 1 && bar_item->num_windows >= adid && bar_item->windows[adid - 1]) {
     window_send_to_space(bar_item->windows[adid - 1], dsid);
   }
   popup_change_space(&bar_item->popup, dsid, adid);
