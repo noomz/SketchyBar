@@ -785,6 +785,16 @@ void bar_manager_display_changed(struct bar_manager* bar_manager) {
   bar_manager_handle_display_change(bar_manager);
   bar_manager_handle_space_change(bar_manager, true);
   animator_renew_display_link(&bar_manager->animator);
+
+  display_log_state("rebuild", 0, 0);
+  for (int i = 0; i < bar_manager->bar_count; i++) {
+    struct bar* bar = bar_manager->bars[i];
+    CGRect f = bar->window.frame;
+    fprintf(stderr, "[display]   bar %d did=%u adid=%u frame=%.0f,%.0f %.0fx%.0f\n",
+                    i, bar->did, bar->adid, f.origin.x, f.origin.y,
+                    f.size.width, f.size.height);
+  }
+  fflush(stderr);
 }
 
 void bar_manager_cancel_drag(struct bar_manager* bar_manager) {
@@ -1029,6 +1039,7 @@ void bar_manager_handle_system_will_sleep(struct bar_manager* bar_manager) {
 }
 
 void bar_manager_handle_system_woke(struct bar_manager* bar_manager) {
+  display_log_state(bar_manager->sleeps ? "wake" : "wake-retry", 0, 0);
   if (bar_manager->sleeps) {
     bar_manager->sleeps = false;
 

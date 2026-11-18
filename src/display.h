@@ -26,3 +26,4 @@ void forced_brightness_event();
 void begin_receiving_brightness_events();
 
 void display_serialize(FILE* rsp);
+void display_log_state(const char* tag, uint32_t did, uint32_t flags);
