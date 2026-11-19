@@ -21,7 +21,50 @@ static void brightness_handler(void* notification_center, uint32_t did, void* na
   }
 }
 
+// Diagnostic for the stale display state seen after wake + monitor attach:
+// a managed (SkyLight) display that CoreGraphics cannot map to an id means
+// this process holds an outdated CG display list.
+void display_log_state(const char* tag, uint32_t did, uint32_t flags) {
+  uint32_t cg_count = 0;
+  CGGetActiveDisplayList(0, NULL, &cg_count);
+
+  int managed_count = 0, unmapped = 0;
+  CFArrayRef managed = SLSCopyManagedDisplays(g_connection);
+  if (managed) {
+    managed_count = CFArrayGetCount(managed);
+    for (int i = 0; i < managed_count; i++) {
+      CFUUIDRef uuid = CFUUIDCreateFromString(NULL,
+                                              CFArrayGetValueAtIndex(managed, i));
+      if (!uuid) { unmapped++; continue; }
+      if (!CGDisplayGetDisplayIDFromUUID(uuid)) unmapped++;
+      CFRelease(uuid);
+    }
+    CFRelease(managed);
+  }
+
+  char stamp[32];
+  time_t now = time(NULL);
+  strftime(stamp, sizeof(stamp), "%Y-%m-%d %H:%M:%S", localtime(&now));
+  fprintf(stderr, "%s [display] %s did=%u flags=0x%x main=%u cg=%u managed=%d"
+                  " unmapped=%d%s\n",
+                  stamp, tag, did, flags, CGMainDisplayID(), cg_count,
+                  managed_count, unmapped,
+                  (unmapped || (int)cg_count != managed_count) ? " STALE" : "");
+
+  uint32_t ids[16];
+  uint32_t count = 0;
+  CGGetActiveDisplayList(16, ids, &count);
+  for (uint32_t i = 0; i < count; i++) {
+    CGRect b = CGDisplayBounds(ids[i]);
+    fprintf(stderr, "%s [display]   cg did=%u %.0f,%.0f %.0fx%.0f\n",
+                    stamp, ids[i], b.origin.x, b.origin.y,
+                    b.size.width, b.size.height);
+  }
+  fflush(stderr);
+}
+
 static DISPLAY_EVENT_HANDLER(display_handler) {
+  display_log_state("callback", did, flags);
   if (flags & kCGDisplayAddFlag) {
     struct event event = { (void *)(intptr_t) did, DISPLAY_ADDED };
     event_post(&event);

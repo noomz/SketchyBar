@@ -235,6 +235,7 @@ int main(int argc, char **argv) {
   windows_freeze();
   bar_manager_begin(&g_bar_manager);
   windows_unfreeze();
+  display_log_state("start", 0, 0);
 
   if (!mach_server_begin(&g_mach_server, mach_message_handler))
     error("%s: could not initialize daemon! abort..\n", g_name);
