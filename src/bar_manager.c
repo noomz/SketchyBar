@@ -774,12 +774,34 @@ void bar_manager_display_added(struct bar_manager* bar_manager, uint32_t did) {
   bar_manager_display_changed(bar_manager);
 }
 
+// With display=main the one bar keeps arrangement slot 1 across display
+// changes, so its windows can stay: point it at the current main display and
+// let the forced refresh resize it. Closing and reopening every item window
+// blocks the main thread on WindowServer for 15-30 s, and the bar draws
+// nothing meanwhile.
+static bool bar_manager_retarget_main_bar(struct bar_manager* bar_manager) {
+  if (bar_manager->displays != DISPLAY_MAIN_PATTERN
+      || bar_manager->bar_count != 1
+      || !bar_manager->bars[0]) {
+    return false;
+  }
+
+  uint32_t did = display_main_display_id();
+  int adid = display_arrangement(did);
+  if (adid < 1 || (uint32_t)adid != bar_manager->bars[0]->adid) return false;
+
+  bar_manager->bars[0]->did = did;
+  return true;
+}
+
 void bar_manager_display_changed(struct bar_manager* bar_manager) {
   bar_manager->active_adid = display_active_display_adid();
 
-  bar_manager_freeze(bar_manager);
-  bar_manager_reset(bar_manager);
-  bar_manager_unfreeze(bar_manager);
+  if (!bar_manager_retarget_main_bar(bar_manager)) {
+    bar_manager_freeze(bar_manager);
+    bar_manager_reset(bar_manager);
+    bar_manager_unfreeze(bar_manager);
+  }
   bar_manager_refresh(bar_manager, true);
 
   bar_manager_handle_display_change(bar_manager);
