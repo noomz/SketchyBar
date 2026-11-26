@@ -793,11 +793,18 @@ static bool bar_manager_retarget_main_bar(struct bar_manager* bar_manager) {
   uint32_t adid = arrangement > 0 ? arrangement : 1;
   if (adid != bar_manager->bars[0]->adid) return false;
 
+  // A display whose space is not known yet takes the full rebuild:
+  // bar_manager_handle_space_change would otherwise see dsid change to 0 and
+  // send every window to space 0 when sticky is off.
+  uint64_t dsid = display_space_id(did);
+  if (!dsid) return false;
+
   // Drawing returns early on sid 0, so a space id that went stale during a
   // reconfiguration must be read again before the forced refresh. dsid stays:
   // bar_manager_handle_space_change compares it to move windows between spaces.
   bar_manager->bars[0]->did = did;
-  bar_manager->bars[0]->sid = mission_control_index(display_space_id(did));
+  bar_manager->bars[0]->sid = mission_control_index(dsid);
+  bar_manager->needs_ordering = true;
   return true;
 }
 
