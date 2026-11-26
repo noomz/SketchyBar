@@ -787,10 +787,17 @@ static bool bar_manager_retarget_main_bar(struct bar_manager* bar_manager) {
   }
 
   uint32_t did = display_main_display_id();
-  int adid = display_arrangement(did);
-  if (adid < 1 || (uint32_t)adid != bar_manager->bars[0]->adid) return false;
+  // display_arrangement returns 0 while the main display is missing from the
+  // managed list mid-reconfiguration; bar_manager_begin uses slot 1 then too.
+  int arrangement = display_arrangement(did);
+  uint32_t adid = arrangement > 0 ? arrangement : 1;
+  if (adid != bar_manager->bars[0]->adid) return false;
 
+  // Drawing returns early on sid 0, so a space id that went stale during a
+  // reconfiguration must be read again before the forced refresh. dsid stays:
+  // bar_manager_handle_space_change compares it to move windows between spaces.
   bar_manager->bars[0]->did = did;
+  bar_manager->bars[0]->sid = mission_control_index(display_space_id(did));
   return true;
 }
 
